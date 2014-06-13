@@ -1,14 +1,13 @@
 {Server:WebSocketServer, OPEN:OPEN} = require('ws')
-wss = new WebSocketServer port:8080
 request = require 'request'
 express = require 'express'
 bodyParser = require 'body-parser'
+env = require './env'
+wss = new WebSocketServer port:env.wssPort
 
 # mysql = require 'mysql'
 # env = require './env'
 
-gatewayServers = ["localhost:3000"]
-gatewayForUser = (userId) -> "localhost:3000"
 
 serverId = 1
 
@@ -16,7 +15,7 @@ app = express()
 app.use bodyParser()
 
 start = ->
-	app.listen 3001
+	app.listen env.httpPort
 	app.post '/update', (req, res) ->
 		for clientId in req.body.clientIds
 			ws = socketsByClientId[clientId]
@@ -42,7 +41,7 @@ start = ->
 			socketsByClientId[clientId] = ws
 
 		ws.on 'close', ->
-			for gatewayServer in gatewayServers
+			for gatewayServer in env.gatewayServers
 				request
 					url: "http://#{gatewayServer}/unsubscribe",
 					method:'post'
@@ -59,7 +58,7 @@ start = ->
 					setClientId message.substr 1, 32
 					userId = message.substr 33
 					request {
-						url: "http://#{gatewayForUser(userId)}/init",
+						url: "http://#{env.gatewayForUser(userId)}/init",
 						method: 'post'
 						form:
 							serverId:serverId
@@ -75,7 +74,7 @@ start = ->
 					userId = parts[1]
 					changes = parts[2]
 					request {
-						url: "http://#{gatewayForUser(userId)}/update",
+						url: "http://#{env.gatewayForUser(userId)}/update",
 						method: 'post'
 						form:
 							serverId:serverId
@@ -92,7 +91,7 @@ start = ->
 					userId = parts[0].substr 1
 					object = parts[1]
 					request {
-						url: "http://#{gatewayForUser(userId)}/subscribe",
+						url: "http://#{env.gatewayForUser(userId)}/subscribe",
 						method:'post'
 						form:
 							serverId:serverId
@@ -108,7 +107,7 @@ start = ->
 					userId = parts[0].substr 1
 					object = parts[1]
 					request {
-						url: "http://#{gatewayForUser(userId)}/unsubscribe",
+						url: "http://#{env.gatewayForUser(userId)}/unsubscribe",
 						method:'post'
 						form:
 							serverId:serverId
@@ -129,7 +128,7 @@ start = ->
 						toRetrieve = parts[i*2 + 1]
 						do (userId) ->
 							request {
-								url: "http://#{gatewayForUser(userId)}/retrieve",
+								url: "http://#{env.gatewayForUser(userId)}/retrieve",
 								method:'post'
 								form:
 									serverId:serverId
@@ -142,13 +141,15 @@ start = ->
 								if ++done == count
 									ws.send "R#{r.join '\t'}"
 
-count = 0
-for gatewayServer in gatewayServers
-	request {
-		url: "http://#{gatewayServer}/port/started",
-		method:'post'
-		form:
-			serverId:serverId
-	}, ->
-		if ++count == gatewayServers.length
-			start()
+
+env.init ->
+	count = 0
+	for gatewayServer in env.gatewayServers
+		request {
+			url: "http://#{gatewayServer}/port/started",
+			method:'post'
+			form:
+				serverId:serverId
+		}, ->
+			if ++count == env.gatewayServers.length
+				start()
