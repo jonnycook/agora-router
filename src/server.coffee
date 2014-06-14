@@ -4,37 +4,75 @@ express = require 'express'
 bodyParser = require 'body-parser'
 env = require './env'
 wss = new WebSocketServer port:env.wssPort
+_ = require 'lodash'
 
 # mysql = require 'mysql'
 # env = require './env'
 
+process.on 'uncaughtException', (err) -> 
+  console.log err
 
 serverId = 1
 
 app = express()
 app.use bodyParser()
 
+downServers = {}
+addDownServer = (gatewayServerId) ->
+	console.log 'server down %s', gatewayServerId
+	downServers[gatewayServerId] = true
+
+removeDownServer = (gatewayServerId) ->
+	delete downServers[gatewayServerId]
+
+gatewayMessage = (userId, type, params, success, fail=null) ->
+	gatewayServerId = env.gatewayForUser(userId)
+	if downServers[gatewayServerId]
+		fail? 'down'
+	else
+		request {
+			url: "http://#{env.gatewayServers[gatewayServerId]}/#{type}",
+			method: 'post'
+			form:params
+		}, (error, response, body) ->
+			if error
+				addDownServer gatewayServerId
+				fail? 'down'
+			else
+				success body
+
+send = (ws, message) ->
+	if ws.readyState == OPEN
+		ws.send message
+	else
+		console.log 'WebSocket not open'
+
 start = ->
+	console.log 'started'
 	app.listen env.httpPort
 	app.post '/update', (req, res) ->
 		for clientId in req.body.clientIds
 			ws = socketsByClientId[clientId]
 			if ws
 				if ws.readyState == OPEN
-					ws.send "u#{req.body.userId}\t#{req.body.changes}"
+					send ws, "u#{req.body.userId}\t#{req.body.changes}"
 				else
 					delete socketsByClientId[clientId]
 		res.send ''
 
 	app.post '/gateway/started', (req, res) ->
+		removeDownServer req.body.serverId
 		for clientId, ws of socketsByClientId
-			ws.send '!'
+			send ws, '.'
 		res.send 'ok'
 
 	socketsByClientId = {}
 
 	wss.on 'connection', (ws) ->
 		clientId = null
+		onError = ->
+			ws.send ','
+
 		setClientId = (c) ->
 			console.log 'client id %s', c
 			clientId = c
@@ -42,11 +80,14 @@ start = ->
 
 		ws.on 'close', ->
 			for gatewayServer in env.gatewayServers
-				request
-					url: "http://#{gatewayServer}/unsubscribe",
-					method:'post'
-					form:
-						clientId:clientId
+				try
+					request
+						url: "http://#{gatewayServer}/unsubscribe",
+						method:'post'
+						form:
+							clientId:clientId
+				catch e
+					console.log 'error'
 			delete socketsByClientId[clientId]
 
 		ws.on 'message', (message) ->
@@ -57,15 +98,12 @@ start = ->
 				when 'i'
 					setClientId message.substr 1, 32
 					userId = message.substr 33
-					request {
-						url: "http://#{env.gatewayForUser(userId)}/init",
-						method: 'post'
-						form:
-							serverId:serverId
-							clientId:clientId
-							userId:userId
-					}, (error, response, body) ->
-						ws.send "I#{body}"
+					gatewayMessage userId, 'init',
+						serverId:serverId
+						clientId:clientId
+						userId:userId
+						(body) -> send ws, "I#{body}"		
+						onError		
 
 				# update
 				when 'u'
@@ -73,49 +111,40 @@ start = ->
 					updateToken = parts[0].substr 1
 					userId = parts[1]
 					changes = parts[2]
-					request {
-						url: "http://#{env.gatewayForUser(userId)}/update",
-						method: 'post'
-						form:
-							serverId:serverId
-							updateToken:updateToken
-							clientId:clientId
-							userId:userId
-							changes:changes
-					}, (error, response, body) ->
-						ws.send "U#{body}"
+					gatewayMessage userId, 'update',
+						serverId:serverId
+						updateToken:updateToken
+						clientId:clientId
+						userId:userId
+						changes:changes
+						(body) -> send ws, "U#{body}"
+						onError		
 
 				# subscribe
 				when 's'
 					parts = message.split '\t'
 					userId = parts[0].substr 1
 					object = parts[1]
-					request {
-						url: "http://#{env.gatewayForUser(userId)}/subscribe",
-						method:'post'
-						form:
-							serverId:serverId
-							clientId:clientId
-							userId:userId
-							object:object
-					}, (error, response, body) ->
-						ws.send "S#{userId}\t#{object}\t#{body}"
+					gatewayMessage userId, 'subscribe',
+						serverId:serverId
+						clientId:clientId
+						userId:userId
+						object:object
+						(body) -> send ws, "S#{userId}\t#{object}\t#{body}"
+						onError		
 
 				# unsubscribe (z kind of looks like a backwards s... (u is already taken))
 				when 'z'
 					parts = message.split '\t'
 					userId = parts[0].substr 1
 					object = parts[1]
-					request {
-						url: "http://#{env.gatewayForUser(userId)}/unsubscribe",
-						method:'post'
-						form:
-							serverId:serverId
-							clientId:clientId
-							userId:userId
-							object:object
-					}, (error, response, body) ->
-						ws.send "Z#{userId}\t#{object}"
+					gatewayMessage userId, 'unsubscribe',
+						serverId:serverId
+						clientId:clientId
+						userId:userId
+						object:object
+						(body) -> send ws, "Z#{userId}\t#{object}"
+						onError		
 
 				# retrieve
 				when 'r'
@@ -127,29 +156,30 @@ start = ->
 						userId = parts[i*2]
 						toRetrieve = parts[i*2 + 1]
 						do (userId) ->
-							request {
-								url: "http://#{env.gatewayForUser(userId)}/retrieve",
-								method:'post'
-								form:
-									serverId:serverId
-									userId:userId
-									clientId:clientId
-									records:toRetrieve
-							}, (error, response, body) ->
-								r.push userId
-								r.push body
-								if ++done == count
-									ws.send "R#{r.join '\t'}"
+							gatewayMessage userId, 'retrieve',
+								serverId:serverId
+								userId:userId
+								clientId:clientId
+								records:toRetrieve
+								(body) ->
+									r.push userId
+									r.push body
+									if ++done == count
+										send ws, "R#{r.join '\t'}"
+								onError		
 
 
 env.init ->
 	count = 0
-	for gatewayServer in env.gatewayServers
+	num = _.size env.gatewayServers
+	for id,gatewayServer of env.gatewayServers
 		request {
 			url: "http://#{gatewayServer}/port/started",
 			method:'post'
 			form:
 				serverId:serverId
-		}, ->
-			if ++count == env.gatewayServers.length
+		}, (error) ->
+			if error
+				addDownServer id
+			if ++count == num
 				start()
