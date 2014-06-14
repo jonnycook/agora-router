@@ -35,6 +35,7 @@ addDownServer = function(gatewayServerId) {
 };
 
 removeDownServer = function(gatewayServerId) {
+  console.log('server up %s', gatewayServerId);
   return delete downServers[gatewayServerId];
 };
 

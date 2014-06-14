@@ -23,6 +23,7 @@ addDownServer = (gatewayServerId) ->
 	downServers[gatewayServerId] = true
 
 removeDownServer = (gatewayServerId) ->
+	console.log 'server up %s', gatewayServerId
 	delete downServers[gatewayServerId]
 
 gatewayMessage = (userId, type, params, success, fail=null) ->
