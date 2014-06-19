@@ -83,7 +83,7 @@ start = ->
 			for gatewayServer in env.gatewayServers
 				try
 					request
-						url: "http://#{gatewayServer}/unsubscribe",
+						url: "http://#{gatewayServer}/unsubscribeClient",
 						method:'post'
 						form:
 							clientId:clientId
@@ -94,7 +94,20 @@ start = ->
 		ws.on 'message', (message) ->
 			console.log 'message: %s', message
 			messageType = message[0]
+
+
 			switch messageType
+				# message
+				when 'm'
+					[userId, type, params, cb] = message.substr(1).split '\t'
+					params = JSON.parse params
+					params.clientId = clientId
+					params.userId = userId
+					gatewayMessage userId, type, params, ((body) ->
+						if cb
+							send ws, "M#{cb}\t#{body}"),
+						onError
+
 				# init
 				when 'i'
 					setClientId message.substr 1, 32
@@ -126,11 +139,13 @@ start = ->
 					parts = message.split '\t'
 					userId = parts[0].substr 1
 					object = parts[1]
+					key = parts[2]
 					gatewayMessage userId, 'subscribe',
 						serverId:serverId
 						clientId:clientId
 						userId:userId
 						object:object
+						key:key
 						(body) -> send ws, "S#{userId}\t#{object}\t#{body}"
 						onError		
 

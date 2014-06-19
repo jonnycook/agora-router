@@ -119,7 +119,7 @@ start = function() {
         gatewayServer = _ref1[_i];
         try {
           request({
-            url: "http://" + gatewayServer + "/unsubscribe",
+            url: "http://" + gatewayServer + "/unsubscribeClient",
             method: 'post',
             form: {
               clientId: clientId
@@ -133,10 +133,20 @@ start = function() {
       return delete socketsByClientId[clientId];
     });
     return ws.on('message', function(message) {
-      var changes, count, done, i, messageType, object, parts, r, toRetrieve, updateToken, userId, _i, _results;
+      var cb, changes, count, done, i, key, messageType, object, params, parts, r, toRetrieve, type, updateToken, userId, _i, _ref1, _results;
       console.log('message: %s', message);
       messageType = message[0];
       switch (messageType) {
+        case 'm':
+          _ref1 = message.substr(1).split('\t'), userId = _ref1[0], type = _ref1[1], params = _ref1[2], cb = _ref1[3];
+          params = JSON.parse(params);
+          params.clientId = clientId;
+          params.userId = userId;
+          return gatewayMessage(userId, type, params, (function(body) {
+            if (cb) {
+              return send(ws, "M" + cb + "\t" + body);
+            }
+          }), onError);
         case 'i':
           setClientId(message.substr(1, 32));
           userId = message.substr(33);
@@ -165,11 +175,13 @@ start = function() {
           parts = message.split('\t');
           userId = parts[0].substr(1);
           object = parts[1];
+          key = parts[2];
           return gatewayMessage(userId, 'subscribe', {
             serverId: serverId,
             clientId: clientId,
             userId: userId,
-            object: object
+            object: object,
+            key: key
           }, function(body) {
             return send(ws, "S" + userId + "\t" + object + "\t" + body);
           }, onError);
