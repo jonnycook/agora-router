@@ -29,7 +29,7 @@ removeDownServer = (gatewayServerId) ->
 gatewayMessage = (userId, type, params, success, fail=null) ->
 	gatewayServerId = env.gatewayForUser(userId)
 	if downServers[gatewayServerId]
-		fail? 'down'
+		fail? 'down', gatewayServerId
 	else
 		request {
 			url: "http://#{env.gatewayServers[gatewayServerId]}/#{type}",
@@ -38,9 +38,9 @@ gatewayMessage = (userId, type, params, success, fail=null) ->
 		}, (error, response, body) ->
 			if error
 				addDownServer gatewayServerId
-				fail? 'down'
+				fail? 'down', gatewayServerId
 			else
-				success body
+				success body, gatewayServerId
 
 send = (ws, message) ->
 	if ws.readyState == OPEN
@@ -61,18 +61,28 @@ start = ->
 					delete socketsByClientId[clientId]
 		res.send ''
 
+	app.post '/sync', (req, res) ->
+		for clientId in req.body.clientIds
+			ws = socketsByClientId[clientId]
+			if ws
+				if ws.readyState == OPEN
+					send ws, "Y#{req.body.userId}\t#{req.body.object}\t#{req.body.data}"
+				else
+					delete socketsByClientId[clientId]
+		res.send ''
+
 	app.post '/gateway/started', (req, res) ->
 		removeDownServer req.body.serverId
 		for clientId, ws of socketsByClientId
-			send ws, '.'
+			send ws, ".#{req.body.serverId}"
 		res.send 'ok'
 
 	socketsByClientId = {}
 
 	wss.on 'connection', (ws) ->
 		clientId = null
-		onError = ->
-			ws.send ','
+		onError = (error, gatewayServerId) ->
+			ws.send ",#{gatewayServerId}"
 
 		setClientId = (c) ->
 			console.log 'client id %s', c
@@ -94,77 +104,70 @@ start = ->
 		ws.on 'message', (message) ->
 			console.log 'message: %s', message
 			messageType = message[0]
-
+			message = message.substr 1
 
 			switch messageType
 				# message
 				when 'm'
-					[userId, type, params, cb] = message.substr(1).split '\t'
+					[number, userId, type, params] = message.split '\t'
 					params = JSON.parse params
 					params.clientId = clientId
 					params.userId = userId
 					gatewayMessage userId, type, params, ((body) ->
-						if cb
-							send ws, "M#{cb}\t#{body}"),
+						send ws, "<#{number}\t#{body}"),
 						onError
 
 				# init
 				when 'i'
-					setClientId message.substr 1, 32
-					userId = message.substr 33
+					[number, clientId, userId] = message.split '\t'
+					setClientId clientId
 					gatewayMessage userId, 'init',
 						serverId:serverId
 						clientId:clientId
 						userId:userId
-						(body) -> send ws, "I#{body}"		
+						(body, gatewayServerId) -> send ws, "<#{number}\t#{gatewayServerId}\t#{body}"
 						onError		
 
 				# update
 				when 'u'
-					parts = message.split '\t'
-					updateToken = parts[0].substr 1
-					userId = parts[1]
-					changes = parts[2]
+					[number, updateToken, userId, changes] = message.split '\t'
 					gatewayMessage userId, 'update',
 						serverId:serverId
 						updateToken:updateToken
 						clientId:clientId
 						userId:userId
 						changes:changes
-						(body) -> send ws, "U#{body}"
+						(body) -> send ws, "<#{number}\t#{body}"
 						onError		
 
 				# subscribe
 				when 's'
-					parts = message.split '\t'
-					userId = parts[0].substr 1
-					object = parts[1]
-					key = parts[2]
+					[number, userId, object, key] = message.split '\t'
 					gatewayMessage userId, 'subscribe',
 						serverId:serverId
 						clientId:clientId
 						userId:userId
 						object:object
 						key:key
-						(body) -> send ws, "S#{userId}\t#{object}\t#{body}"
+						(body, gatewayServerId) -> send ws, "<#{number}\t#{gatewayServerId}\t#{userId}\t#{object}\t#{body}"
 						onError		
 
 				# unsubscribe (z kind of looks like a backwards s... (u is already taken))
 				when 'z'
-					parts = message.split '\t'
-					userId = parts[0].substr 1
-					object = parts[1]
+					[number, userId, object] = message.split '\t'
 					gatewayMessage userId, 'unsubscribe',
 						serverId:serverId
 						clientId:clientId
 						userId:userId
 						object:object
-						(body) -> send ws, "Z#{userId}\t#{object}"
+						(body) -> send ws, "<#{number}\t#{userId}\t#{object}"
 						onError		
 
 				# retrieve
 				when 'r'
-					parts = message.substr(1).split('\t')
+					parts = message.split('\t')
+					number = parts[0]
+					parts = parts.slice 1
 					count = parts.length/2
 					done = 0
 					r = []
@@ -181,7 +184,7 @@ start = ->
 									r.push userId
 									r.push body
 									if ++done == count
-										send ws, "R#{r.join '\t'}"
+										send ws, "<#{number}\t#{r.join '\t'}"
 								onError		
 
 
