@@ -156,9 +156,7 @@ start = function() {
       switch (messageType) {
         case 'm':
           _ref1 = message.split('\t'), number = _ref1[0], userId = _ref1[1], type = _ref1[2], params = _ref1[3];
-          if (params) {
-            params = JSON.parse(params);
-          }
+          params = params ? JSON.parse(params) : {};
           params.clientId = clientId;
           params.userId = userId;
           return gatewayMessage(userId, type, params, (function(body) {

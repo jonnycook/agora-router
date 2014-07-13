@@ -110,7 +110,7 @@ start = ->
 				# message
 				when 'm'
 					[number, userId, type, params] = message.split '\t'
-					params = JSON.parse params if params
+					params = if params then JSON.parse params else {}
 					params.clientId = clientId
 					params.userId = userId
 					gatewayMessage userId, type, params, ((body) ->
