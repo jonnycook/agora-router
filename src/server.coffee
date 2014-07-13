@@ -110,7 +110,6 @@ start = ->
 				# message
 				when 'm'
 					[number, userId, type, params] = message.split '\t'
-					console.log params
 					params = JSON.parse params if params
 					params.clientId = clientId
 					params.userId = userId
