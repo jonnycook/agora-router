@@ -37,7 +37,7 @@ gatewayMessage = (userId, type, params, success, fail=null) ->
 			form:params
 		}, (error, response, body) ->
 			if error
-				addDownServer gatewayServerId
+				# addDownServer gatewayServerId
 				fail? 'down', gatewayServerId
 			else
 				success body, gatewayServerId
@@ -72,7 +72,7 @@ start = ->
 		res.send ''
 
 	app.post '/gateway/started', (req, res) ->
-		removeDownServer req.body.serverId
+		# removeDownServer req.body.serverId
 		for clientId, ws of socketsByClientId
 			send ws, ".#{req.body.serverId}"
 		res.send 'ok'
@@ -195,10 +195,7 @@ start = ->
 						# userId:userId
 						args:args
 						->
-						onError		
-
-
-
+						onError
 
 env.init ->
 	count = 0

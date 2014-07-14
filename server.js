@@ -55,7 +55,6 @@ gatewayMessage = function(userId, type, params, success, fail) {
       form: params
     }, function(error, response, body) {
       if (error) {
-        addDownServer(gatewayServerId);
         return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;
       } else {
         return success(body, gatewayServerId);
@@ -110,7 +109,6 @@ start = function() {
   });
   app.post('/gateway/started', function(req, res) {
     var clientId, ws;
-    removeDownServer(req.body.serverId);
     for (clientId in socketsByClientId) {
       ws = socketsByClientId[clientId];
       send(ws, "." + req.body.serverId);
