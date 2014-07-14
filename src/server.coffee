@@ -185,7 +185,19 @@ start = ->
 									r.push body
 									if ++done == count
 										send ws, "<#{number}\t#{r.join '\t'}"
-								onError		
+								onError	
+
+				when 't'
+					[userId, args...] = message.split '\t'
+					gatewayMessage userId, 'track',
+						serverId:serverId
+						clientId:clientId
+						# userId:userId
+						args:args
+						->
+						onError		
+
+
 
 
 env.init ->
