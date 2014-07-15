@@ -103,10 +103,16 @@ start = ->
 
 	socketsByClientId = {}
 
+	count = 0
+	setInterval (->
+		console.log "count: #{count}"
+	), 1000*60
+
 	nextNumber = 0
 	wss.on 'connection', (ws) ->
+		++ count
 		wsNumber = nextNumber++
-		console.log "[#{wsNumber}] opened"
+		console.log "[#{wsNumber}] opened (#{count})"
 		clientId = null
 		onError = (error, gatewayServerId) ->
 			ws.send ",#{gatewayServerId}"
@@ -117,7 +123,8 @@ start = ->
 			socketsByClientId[clientId] = ws
 
 		ws.on 'close', ->
-			console.log "[#{wsNumber}] closed"
+			--count
+			console.log "[#{wsNumber}] closed (#{count})"
 			for gatewayServer in env.gatewayServers
 				try
 					request
