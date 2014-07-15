@@ -55,6 +55,7 @@ gatewayMessage = function(userId, type, params, success, fail) {
       form: params
     }, function(error, response, body) {
       if (error) {
+        console.log("error: " + userId + " " + type);
         return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;
       } else {
         return success(body, gatewayServerId);

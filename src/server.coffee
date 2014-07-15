@@ -37,6 +37,7 @@ gatewayMessage = (userId, type, params, success, fail=null) ->
 			form:params
 		}, (error, response, body) ->
 			if error
+				console.log "error: #{userId} #{type}"
 				# addDownServer gatewayServerId
 				fail? 'down', gatewayServerId
 			else
