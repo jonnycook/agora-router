@@ -57,7 +57,7 @@ gatewayMessage = function(userId, type, params, success, fail) {
     }, function(error, response, body) {
       var duration, endTime;
       endTime = new Date().getTime();
-      duration = endTime - startTime;
+      duration = (endTime - startTime) / 1000;
       if (error) {
         console.log("error: " + userId + " " + type + " (" + duration + ")");
         return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;

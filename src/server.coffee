@@ -38,7 +38,7 @@ gatewayMessage = (userId, type, params, success, fail=null) ->
 			form:params
 		}, (error, response, body) ->
 			endTime = new Date().getTime()
-			duration = endTime - startTime
+			duration = (endTime - startTime)/1000
 			if error
 				console.log "error: #{userId} #{type} (#{duration})"
 				# addDownServer gatewayServerId
