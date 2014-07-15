@@ -101,18 +101,18 @@ start = ->
 	nextNumber = 0
 	wss.on 'connection', (ws) ->
 		number = nextNumber++
-		console.log "opened #{number}"
+		console.log "[#{number}] opened"
 		clientId = null
 		onError = (error, gatewayServerId) ->
 			ws.send ",#{gatewayServerId}"
 
 		setClientId = (c) ->
-			console.log 'client id %s %s', c, number
+			console.log "[#{number}] client id #{c}"
 			clientId = c
 			socketsByClientId[clientId] = ws
 
 		ws.on 'close', ->
-			console.log "closed #{number}"
+			console.log "[#{number}] closed"
 			for gatewayServer in env.gatewayServers
 				try
 					request
@@ -125,7 +125,7 @@ start = ->
 			delete socketsByClientId[clientId]
 
 		ws.on 'message', (message) ->
-			console.log 'message: %s', message
+			console.log "[#{number}] message: #{message}"
 			messageType = message[0]
 			message = message.substr 1
 
