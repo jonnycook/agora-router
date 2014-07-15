@@ -43,10 +43,11 @@ gatewayMessage = (userId, type, params, success, fail=null) ->
 				success body, gatewayServerId
 
 send = (ws, message) ->
-	if ws.readyState == OPEN
-		ws.send message
-	else
-		console.log 'WebSocket not open'
+	if ws
+		if ws.readyState == OPEN
+			ws.send message
+		else
+			console.log 'WebSocket not open'
 
 start = ->
 	console.log 'started'
@@ -76,6 +77,23 @@ start = ->
 		for clientId, ws of socketsByClientId
 			send ws, ".#{req.body.serverId}"
 		res.send 'ok'
+
+	nextCommandId = 0
+	commandCbs = {}
+	app.get '/command', (req, res) ->
+		ws = socketsByClientId[req.query.clientId]
+		commandId = nextCommandId++
+		send ws, "$#{commandId}\t#{req.query.command}"
+		timeoutId = setTimeout (->
+			if commandCbs[commandId]
+				res.send 'timeout'
+				delete commandCbs[commandId]
+		), 1000*15
+
+		commandCbs[commandId] = (response) ->
+			res.send response
+			delete commandCbs[commandId] 
+
 
 	socketsByClientId = {}
 
@@ -196,6 +214,11 @@ start = ->
 						args:args
 						->
 						onError
+
+				when '$'
+					[commandId, response] = message.split '\t'
+					commandCbs[commandId]? response
+
 
 env.init ->
 	count = 0

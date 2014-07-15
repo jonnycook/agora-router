@@ -64,15 +64,17 @@ gatewayMessage = function(userId, type, params, success, fail) {
 };
 
 send = function(ws, message) {
-  if (ws.readyState === OPEN) {
-    return ws.send(message);
-  } else {
-    return console.log('WebSocket not open');
+  if (ws) {
+    if (ws.readyState === OPEN) {
+      return ws.send(message);
+    } else {
+      return console.log('WebSocket not open');
+    }
   }
 };
 
 start = function() {
-  var socketsByClientId;
+  var commandCbs, nextCommandId, socketsByClientId;
   console.log('started');
   app.listen(env.httpPort);
   app.post('/update', function(req, res) {
@@ -115,6 +117,24 @@ start = function() {
     }
     return res.send('ok');
   });
+  nextCommandId = 0;
+  commandCbs = {};
+  app.get('/command', function(req, res) {
+    var commandId, timeoutId, ws;
+    ws = socketsByClientId[req.query.clientId];
+    commandId = nextCommandId++;
+    send(ws, "$" + commandId + "\t" + req.query.command);
+    timeoutId = setTimeout((function() {
+      if (commandCbs[commandId]) {
+        res.send('timeout');
+        return delete commandCbs[commandId];
+      }
+    }), 1000 * 15);
+    return commandCbs[commandId] = function(response) {
+      res.send(response);
+      return delete commandCbs[commandId];
+    };
+  });
   socketsByClientId = {};
   return wss.on('connection', function(ws) {
     var clientId, onError, setClientId;
@@ -148,7 +168,7 @@ start = function() {
       return delete socketsByClientId[clientId];
     });
     return ws.on('message', function(message) {
-      var args, changes, count, done, i, key, messageType, number, object, params, parts, r, toRetrieve, type, updateToken, userId, _i, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _results;
+      var args, changes, commandId, count, done, i, key, messageType, number, object, params, parts, r, response, toRetrieve, type, updateToken, userId, _i, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _results;
       console.log('message: %s', message);
       messageType = message[0];
       message = message.substr(1);
@@ -238,6 +258,9 @@ start = function() {
             clientId: clientId,
             args: args
           }, function() {}, onError);
+        case '$':
+          _ref7 = message.split('\t'), commandId = _ref7[0], response = _ref7[1];
+          return typeof commandCbs[commandId] === "function" ? commandCbs[commandId](response) : void 0;
       }
     });
   });
