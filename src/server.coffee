@@ -31,16 +31,20 @@ gatewayMessage = (userId, type, params, success, fail=null) ->
 	if downServers[gatewayServerId]
 		fail? 'down', gatewayServerId
 	else
+		startTime = new Date().getTime()
 		request {
 			url: "http://#{env.gatewayServers[gatewayServerId]}/#{type}",
 			method: 'post'
 			form:params
 		}, (error, response, body) ->
+			endTime = new Date().getTime()
+			duration = endTime - startTime
 			if error
-				console.log "error: #{userId} #{type}"
+				console.log "error: #{userId} #{type} (#{duration})"
 				# addDownServer gatewayServerId
 				fail? 'down', gatewayServerId
 			else
+				console.log "request: #{userId} #{type} (#{duration})"
 				success body, gatewayServerId
 
 send = (ws, message) ->

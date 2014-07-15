@@ -41,7 +41,7 @@ removeDownServer = function(gatewayServerId) {
 };
 
 gatewayMessage = function(userId, type, params, success, fail) {
-  var gatewayServerId;
+  var gatewayServerId, startTime;
   if (fail == null) {
     fail = null;
   }
@@ -49,15 +49,20 @@ gatewayMessage = function(userId, type, params, success, fail) {
   if (downServers[gatewayServerId]) {
     return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;
   } else {
+    startTime = new Date().getTime();
     return request({
       url: "http://" + env.gatewayServers[gatewayServerId] + "/" + type,
       method: 'post',
       form: params
     }, function(error, response, body) {
+      var duration, endTime;
+      endTime = new Date().getTime();
+      duration = endTime - startTime;
       if (error) {
-        console.log("error: " + userId + " " + type);
+        console.log("error: " + userId + " " + type + " (" + duration + ")");
         return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;
       } else {
+        console.log("request: " + userId + " " + type + " (" + duration + ")");
         return success(body, gatewayServerId);
       }
     });
