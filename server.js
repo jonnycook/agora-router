@@ -74,7 +74,7 @@ send = function(ws, message) {
 };
 
 start = function() {
-  var commandCbs, nextCommandId, socketsByClientId;
+  var commandCbs, nextCommandId, nextNumber, socketsByClientId;
   console.log('started');
   app.listen(env.httpPort);
   app.post('/update', function(req, res) {
@@ -137,19 +137,23 @@ start = function() {
     };
   });
   socketsByClientId = {};
+  nextNumber = 0;
   return wss.on('connection', function(ws) {
-    var clientId, onError, setClientId;
+    var clientId, number, onError, setClientId;
+    number = nextNumber++;
+    console.log("opened " + number);
     clientId = null;
     onError = function(error, gatewayServerId) {
       return ws.send("," + gatewayServerId);
     };
     setClientId = function(c) {
-      console.log('client id %s', c);
+      console.log('client id %s %s', c, number);
       clientId = c;
       return socketsByClientId[clientId] = ws;
     };
     ws.on('close', function() {
       var e, gatewayServer, _i, _len, _ref1;
+      console.log("closed " + number);
       _ref1 = env.gatewayServers;
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         gatewayServer = _ref1[_i];
@@ -169,7 +173,7 @@ start = function() {
       return delete socketsByClientId[clientId];
     });
     return ws.on('message', function(message) {
-      var args, changes, commandId, count, done, i, key, messageType, number, object, params, parts, r, response, toRetrieve, type, updateToken, userId, _i, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _results;
+      var args, changes, commandId, count, done, i, key, messageType, object, params, parts, r, response, toRetrieve, type, updateToken, userId, _i, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _results;
       console.log('message: %s', message);
       messageType = message[0];
       message = message.substr(1);

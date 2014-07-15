@@ -98,17 +98,21 @@ start = ->
 
 	socketsByClientId = {}
 
+	nextNumber = 0
 	wss.on 'connection', (ws) ->
+		number = nextNumber++
+		console.log "opened #{number}"
 		clientId = null
 		onError = (error, gatewayServerId) ->
 			ws.send ",#{gatewayServerId}"
 
 		setClientId = (c) ->
-			console.log 'client id %s', c
+			console.log 'client id %s %s', c, number
 			clientId = c
 			socketsByClientId[clientId] = ws
 
 		ws.on 'close', ->
+			console.log "closed #{number}"
 			for gatewayServer in env.gatewayServers
 				try
 					request
