@@ -81,6 +81,7 @@ start = ->
 	nextCommandId = 0
 	commandCbs = {}
 	app.get '/command', (req, res) ->
+		console.log req.query
 		ws = socketsByClientId[req.query.clientId]
 		commandId = nextCommandId++
 		send ws, "$#{commandId}\t#{req.query.command}"

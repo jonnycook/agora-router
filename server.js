@@ -121,6 +121,7 @@ start = function() {
   commandCbs = {};
   app.get('/command', function(req, res) {
     var commandId, timeoutId, ws;
+    console.log(req.query);
     ws = socketsByClientId[req.query.clientId];
     commandId = nextCommandId++;
     send(ws, "$" + commandId + "\t" + req.query.command);
