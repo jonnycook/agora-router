@@ -100,6 +100,11 @@ start = ->
 			res.send response
 			delete commandCbs[commandId] 
 
+	app.get '/ping', ->
+		for clientId, ws of socketsByClientId
+			console.log "pinging #{clientId}..."
+			ws.send "p#{clientId}"
+
 
 	socketsByClientId = {}
 
@@ -235,6 +240,9 @@ start = ->
 				when '$'
 					[commandId, response] = message.split '\t'
 					commandCbs[commandId]? response
+
+				when 'P'
+					console.log "[#{wsNumber}] ping received #{clientId} #{message}"
 
 
 env.init ->

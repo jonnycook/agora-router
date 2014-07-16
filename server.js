@@ -142,6 +142,16 @@ start = function() {
       return delete commandCbs[commandId];
     };
   });
+  app.get('/ping', function() {
+    var clientId, ws, _results;
+    _results = [];
+    for (clientId in socketsByClientId) {
+      ws = socketsByClientId[clientId];
+      console.log("pinging " + clientId + "...");
+      _results.push(ws.send("p" + clientId));
+    }
+    return _results;
+  });
   socketsByClientId = {};
   count = 0;
   setInterval((function() {
@@ -278,6 +288,8 @@ start = function() {
         case '$':
           _ref7 = message.split('\t'), commandId = _ref7[0], response = _ref7[1];
           return typeof commandCbs[commandId] === "function" ? commandCbs[commandId](response) : void 0;
+        case 'P':
+          return console.log("[" + wsNumber + "] ping received " + clientId + " " + message);
       }
     });
   });
