@@ -130,13 +130,14 @@ start = ->
 		ws.on 'close', ->
 			--count
 			console.log "[#{wsNumber}] closed (#{count})"
-			for gatewayServer in env.gatewayServers
+			for id, gatewayServer of env.gatewayServers
 				try
 					request
 						url: "http://#{gatewayServer}/unsubscribeClient",
 						method:'post'
 						form:
 							clientId:clientId
+							serverId:serverId
 				catch e
 					console.log 'error'
 			delete socketsByClientId[clientId]
