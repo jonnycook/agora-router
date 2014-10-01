@@ -21,12 +21,20 @@ else
 		1:'50.116.26.9:3000'
 		2:'198.58.119.227:3000'
 
+	cbsForUser = {}
 	gatewayForUser = (userId, cb) ->
 		if gateway = gatewayByUserId[userId]
 			cb gateway
 		else
-			connection.query "SELECT gateway_server FROM m_users WHERE id = #{userId}", (err, rows) ->
-				cb gatewayByUserId[userId] = rows[0].gateway_server
+			if cbsForUser[userId]
+				cbsForUser[userId].push userId
+			else
+				cbsForUser[userId] = [cb]
+				connection.query "SELECT gateway_server FROM m_users WHERE id = #{userId}", (err, rows) ->
+					gateway = gatewayByUserId[userId] = rows[0].gateway_server
+					for cb in cbsForUser[userId]
+						cb gateway
+					delete cbsForUser[userId]
 
 process.on 'uncaughtException', (err) -> 
   console.log err
