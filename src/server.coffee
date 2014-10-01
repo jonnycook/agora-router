@@ -278,17 +278,16 @@ start = ->
 					console.log "[#{wsNumber}] ping received #{clientId} #{message}"
 
 
-env.init ->
-	count = 0
-	num = _.size env.gatewayServers
-	for id,gatewayServer of env.gatewayServers
-		request {
-			url: "http://#{gatewayServer}/port/started",
-			method:'post'
-			form:
-				serverId:serverId
-		}, (error) ->
-			if error
-				addDownServer id
-			if ++count == num
-				start()
+count = 0
+num = _.size env.gatewayServers
+for id,gatewayServer of env.gatewayServers
+	request {
+		url: "http://#{gatewayServer}/port/started",
+		method:'post'
+		form:
+			serverId:serverId
+	}, (error) ->
+		if error
+			addDownServer id
+		if ++count == num
+			start()
