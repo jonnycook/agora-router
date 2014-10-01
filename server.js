@@ -35,7 +35,8 @@ if (env.customGateways) {
   connection.connect();
   gatewayByUserId = {};
   gatewayServers = {
-    1: '50.116.26.9:3000'
+    1: '50.116.26.9:3000',
+    2: '198.58.119.227:3000'
   };
   cbsForUser = {};
   gatewayForUser = function(userId, cb) {
