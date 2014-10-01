@@ -22,14 +22,17 @@ mysql = require('mysql');
 
 gatewayServers = gatewayForUser = null;
 
-connection = mysql.createConnection(env.db);
-
-connection.connect();
-
 if (env.customGateways) {
   gatewayServers = env.gatewayServers;
   gatewayForUser = env.gatewayForUser;
 } else {
+  connection = mysql.createConnection({
+    host: '50.116.31.117',
+    user: 'root',
+    password: 'ghijkk56k',
+    database: 'agora'
+  });
+  connection.connect();
   gatewayByUserId = {};
   gatewayServers = {
     1: '50.116.26.9:3000',
