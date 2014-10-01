@@ -5,9 +5,28 @@ bodyParser = require 'body-parser'
 env = require './env'
 wss = new WebSocketServer port:env.wssPort
 _ = require 'lodash'
+mysql = require 'mysql'
 
-# mysql = require 'mysql'
-# env = require './env'
+gatewayServers = gatewayForUser = null
+
+connection = mysql.createConnection env.db
+connection.connect()
+
+if env.customGateways
+	gatewayServers = env.gatewayServers
+	gatewayForUser = env.gatewayForUser
+else
+	gatewayByUserId = {}
+	gatewayServers =
+		1:'50.116.26.9:3000'
+		2:'198.58.119.227:3000'
+
+	gatewayForUser = (userId, cb) ->
+		if gateway = gatewayByUserId[userId]
+			cb gateway
+		else
+			connection.query "SELECT gateway_server FROM m_users WHERE id = #{userId}", (err, rows) ->
+				cb gatewayByUserId[userId] = rows[0].gateway_server
 
 process.on 'uncaughtException', (err) -> 
   console.log err
@@ -27,25 +46,25 @@ removeDownServer = (gatewayServerId) ->
 	delete downServers[gatewayServerId]
 
 gatewayMessage = (userId, type, params, success, fail=null) ->
-	gatewayServerId = env.gatewayForUser(userId)
-	if downServers[gatewayServerId]
-		fail? 'down', gatewayServerId
-	else
-		startTime = new Date().getTime()
-		request {
-			url: "http://#{env.gatewayServers[gatewayServerId]}/#{type}",
-			method: 'post'
-			form:params
-		}, (error, response, body) ->
-			endTime = new Date().getTime()
-			duration = (endTime - startTime)/1000
-			if error
-				console.log "error: #{userId} #{type} (#{duration})"
-				# addDownServer gatewayServerId
-				fail? 'down', gatewayServerId
-			else
-				console.log "request: #{userId} #{type} (#{duration})"
-				success body, gatewayServerId
+	gatewayForUser userId, (gatewayServerId) ->
+		if downServers[gatewayServerId]
+			fail? 'down', gatewayServerId
+		else
+			startTime = new Date().getTime()
+			request {
+				url: "http://#{env.gatewayServers[gatewayServerId]}/#{type}",
+				method: 'post'
+				form:params
+			}, (error, response, body) ->
+				endTime = new Date().getTime()
+				duration = (endTime - startTime)/1000
+				if error
+					console.log "error: #{userId} #{type} (#{duration})"
+					# addDownServer gatewayServerId
+					fail? 'down', gatewayServerId
+				else
+					console.log "request: #{userId} #{type} (#{duration})"
+					success body, gatewayServerId
 
 send = (ws, message) ->
 	if ws
