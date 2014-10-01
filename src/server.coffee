@@ -279,8 +279,8 @@ start = ->
 
 
 count = 0
-num = _.size env.gatewayServers
-for id,gatewayServer of env.gatewayServers
+num = _.size gatewayServers
+for id,gatewayServer of gatewayServers
 	request {
 		url: "http://#{gatewayServer}/port/started",
 		method:'post'
