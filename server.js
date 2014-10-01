@@ -22,7 +22,7 @@ process.on('uncaughtException', function(err) {
   return console.log(err);
 });
 
-serverId = 1;
+serverId = env.serverId;
 
 app = express();
 

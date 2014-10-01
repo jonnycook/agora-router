@@ -12,7 +12,7 @@ _ = require 'lodash'
 process.on 'uncaughtException', (err) -> 
   console.log err
 
-serverId = 1
+serverId = env.serverId
 
 app = express()
 app.use bodyParser()
