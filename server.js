@@ -95,7 +95,7 @@ gatewayMessage = function(userId, type, params, success, fail) {
     } else {
       startTime = new Date().getTime();
       return request({
-        url: "http://" + env.gatewayServers[gatewayServerId] + "/" + type,
+        url: "http://" + gatewayServers[gatewayServerId] + "/" + type,
         method: 'post',
         form: params
       }, function(error, response, body) {
@@ -218,12 +218,11 @@ start = function() {
       return socketsByClientId[clientId] = ws;
     };
     ws.on('close', function() {
-      var e, gatewayServer, id, _ref1;
+      var e, gatewayServer, id;
       --count;
       console.log("[" + wsNumber + "] closed (" + count + ")");
-      _ref1 = env.gatewayServers;
-      for (id in _ref1) {
-        gatewayServer = _ref1[id];
+      for (id in gatewayServers) {
+        gatewayServer = gatewayServers[id];
         try {
           request({
             url: "http://" + gatewayServer + "/unsubscribeClient",

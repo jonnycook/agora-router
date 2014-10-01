@@ -65,7 +65,7 @@ gatewayMessage = (userId, type, params, success, fail=null) ->
 		else
 			startTime = new Date().getTime()
 			request {
-				url: "http://#{env.gatewayServers[gatewayServerId]}/#{type}",
+				url: "http://#{gatewayServers[gatewayServerId]}/#{type}",
 				method: 'post'
 				form:params
 			}, (error, response, body) ->
@@ -162,7 +162,7 @@ start = ->
 		ws.on 'close', ->
 			--count
 			console.log "[#{wsNumber}] closed (#{count})"
-			for id, gatewayServer of env.gatewayServers
+			for id, gatewayServer of gatewayServers
 				try
 					request
 						url: "http://#{gatewayServer}/unsubscribeClient",
