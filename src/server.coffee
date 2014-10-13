@@ -36,10 +36,16 @@ else
 			else
 				cbsForUser[userId] = [cb]
 				connection.query "SELECT gateway_server FROM m_users WHERE id = #{userId}", (err, rows) ->
-					gateway = gatewayByUserId[userId] = rows[0].gateway_server
-					for cb in cbsForUser[userId]
-						cb gateway
-					delete cbsForUser[userId]
+					if err
+						console.log 'failed to find user', userId
+						for cb in cbsForUser[userId]
+							cb false
+						delete cbsForUser[userId]
+					else
+						gateway = gatewayByUserId[userId] = rows[0].gateway_server
+						for cb in cbsForUser[userId]
+							cb gateway
+						delete cbsForUser[userId]
 
 process.on 'uncaughtException', (err) -> 
   console.log err
@@ -60,24 +66,27 @@ removeDownServer = (gatewayServerId) ->
 
 gatewayMessage = (userId, type, params, success, fail=null) ->
 	gatewayForUser userId, (gatewayServerId) ->
-		if downServers[gatewayServerId]
-			fail? 'down', gatewayServerId
+		if gatewayServerId == false
+			fail? 'no user'
 		else
-			startTime = new Date().getTime()
-			request {
-				url: "http://#{gatewayServers[gatewayServerId]}/#{type}",
-				method: 'post'
-				form:params
-			}, (error, response, body) ->
-				endTime = new Date().getTime()
-				duration = (endTime - startTime)/1000
-				if error
-					console.log "error: #{userId} #{type} (#{duration})"
-					# addDownServer gatewayServerId
-					fail? 'down', gatewayServerId
-				else
-					console.log "request: #{userId} #{type} (#{duration})"
-					success body, gatewayServerId
+			if downServers[gatewayServerId]
+				fail? 'down', gatewayServerId
+			else
+				startTime = new Date().getTime()
+				request {
+					url: "http://#{gatewayServers[gatewayServerId]}/#{type}",
+					method: 'post'
+					form:params
+				}, (error, response, body) ->
+					endTime = new Date().getTime()
+					duration = (endTime - startTime)/1000
+					if error
+						console.log "error: #{userId} #{type} (#{duration})"
+						# addDownServer gatewayServerId
+						fail? 'down', gatewayServerId
+					else
+						console.log "request: #{userId} #{type} (#{duration})"
+						success body, gatewayServerId
 
 send = (ws, message) ->
 	if ws
