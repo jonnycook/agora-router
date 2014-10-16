@@ -32,7 +32,7 @@ else
 			cb gateway
 		else
 			if cbsForUser[userId]
-				cbsForUser[userId].push userId
+				cbsForUser[userId].push cb
 			else
 				cbsForUser[userId] = [cb]
 				connection.query "SELECT gateway_server FROM m_users WHERE id = #{userId}", (err, rows) ->

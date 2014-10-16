@@ -45,18 +45,28 @@ if (env.customGateways) {
       return cb(gateway);
     } else {
       if (cbsForUser[userId]) {
-        return cbsForUser[userId].push(userId);
+        return cbsForUser[userId].push(cb);
       } else {
         cbsForUser[userId] = [cb];
         return connection.query("SELECT gateway_server FROM m_users WHERE id = " + userId, function(err, rows) {
-          var _i, _len, _ref1;
-          gateway = gatewayByUserId[userId] = rows[0].gateway_server;
-          _ref1 = cbsForUser[userId];
-          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-            cb = _ref1[_i];
-            cb(gateway);
+          var _i, _j, _len, _len1, _ref1, _ref2;
+          if (err) {
+            console.log('failed to find user', userId);
+            _ref1 = cbsForUser[userId];
+            for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+              cb = _ref1[_i];
+              cb(false);
+            }
+            return delete cbsForUser[userId];
+          } else {
+            gateway = gatewayByUserId[userId] = rows[0].gateway_server;
+            _ref2 = cbsForUser[userId];
+            for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+              cb = _ref2[_j];
+              cb(gateway);
+            }
+            return delete cbsForUser[userId];
           }
-          return delete cbsForUser[userId];
         });
       }
     }
@@ -91,26 +101,30 @@ gatewayMessage = function(userId, type, params, success, fail) {
   }
   return gatewayForUser(userId, function(gatewayServerId) {
     var startTime;
-    if (downServers[gatewayServerId]) {
-      return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;
+    if (gatewayServerId === false) {
+      return typeof fail === "function" ? fail('no user') : void 0;
     } else {
-      startTime = new Date().getTime();
-      return request({
-        url: "http://" + gatewayServers[gatewayServerId] + "/" + type,
-        method: 'post',
-        form: params
-      }, function(error, response, body) {
-        var duration, endTime;
-        endTime = new Date().getTime();
-        duration = (endTime - startTime) / 1000;
-        if (error) {
-          console.log("error: " + userId + " " + type + " (" + duration + ")");
-          return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;
-        } else {
-          console.log("request: " + userId + " " + type + " (" + duration + ")");
-          return success(body, gatewayServerId);
-        }
-      });
+      if (downServers[gatewayServerId]) {
+        return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;
+      } else {
+        startTime = new Date().getTime();
+        return request({
+          url: "http://" + gatewayServers[gatewayServerId] + "/" + type,
+          method: 'post',
+          form: params
+        }, function(error, response, body) {
+          var duration, endTime;
+          endTime = new Date().getTime();
+          duration = (endTime - startTime) / 1000;
+          if (error) {
+            console.log("error: " + userId + " " + type + " (" + duration + ")");
+            return typeof fail === "function" ? fail('down', gatewayServerId) : void 0;
+          } else {
+            console.log("request: " + userId + " " + type + " (" + duration + ")");
+            return success(body, gatewayServerId);
+          }
+        });
+      }
     }
   });
 };
