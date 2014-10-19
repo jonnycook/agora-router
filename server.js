@@ -51,7 +51,7 @@ if (env.customGateways) {
         return connection.query("SELECT gateway_server FROM m_users WHERE id = " + userId, function(err, rows) {
           var _i, _j, _len, _len1, _ref1, _ref2;
           if (err) {
-            console.log('failed to find user', userId);
+            console.log('failed to find user', userId, err);
             _ref1 = cbsForUser[userId];
             for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
               cb = _ref1[_i];

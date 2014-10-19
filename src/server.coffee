@@ -37,7 +37,7 @@ else
 				cbsForUser[userId] = [cb]
 				connection.query "SELECT gateway_server FROM m_users WHERE id = #{userId}", (err, rows) ->
 					if err
-						console.log 'failed to find user', userId
+						console.log 'failed to find user', userId, err
 						for cb in cbsForUser[userId]
 							cb false
 						delete cbsForUser[userId]
