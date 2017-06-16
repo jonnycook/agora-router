@@ -1,3 +1,6 @@
+Raven = require 'raven'
+Raven.config('https://3301e76fd40f474f9a68d3b653069bc0:35e408f3ae38455dabf71add1e965649@sentry.io/135685').install()
+
 {Server:WebSocketServer, OPEN:OPEN} = require('ws')
 request = require 'request'
 express = require 'express'
@@ -65,6 +68,8 @@ removeDownServer = (gatewayServerId) ->
 	delete downServers[gatewayServerId]
 
 gatewayMessage = (userId, type, params, success, fail=null) ->
+	console.log type
+	console.log 'doing', type
 	gatewayForUser userId, (gatewayServerId) ->
 		if gatewayServerId == false
 			fail? 'no user'
@@ -208,7 +213,7 @@ start = ->
 						clientId:clientId
 						userId:userId
 						(body, gatewayServerId) -> send ws, "<#{number}\t#{gatewayServerId}\t#{body}"
-						onError		
+						onError
 
 				# update
 				when 'u'
